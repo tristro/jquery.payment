@@ -268,6 +268,48 @@ formatBackExpiry = (e) ->
     e.preventDefault()
     setTimeout -> $target.val(value.replace(/\d\s\/\s$/, ''))
 
+# Format Zip Code
+
+reFormatZip = (e) ->
+  setTimeout ->
+    $target = $(e.currentTarget)
+    value   = $target.val()
+    value   = $.payment.formatZip(value)
+    $target.val(value)
+
+formatZip = (e) ->
+  # Only format if input is a number
+  digit = String.fromCharCode(e.which)
+  return unless /^\d+$/.test(digit)
+
+  $target = $(e.currentTarget)
+  value   = $target.val()
+  
+  # Return if focus isn't at the end of the text
+  return if $target.prop('selectionStart')? and
+    $target.prop('selectionStart') isnt value.length
+
+  # If '12345' + 4
+  if /^\d{5}$/.test(value)
+    e.preventDefault()
+    setTimeout -> $target.val(value + '-' + digit)
+
+formatBackZip = (e) ->
+  $target = $(e.currentTarget)
+  value   = $target.val()
+
+  # Return unless backspacing
+  return unless e.which is 8
+
+  # Return if focus isn't at the end of the text
+  return if $target.prop('selectionStart')? and
+    $target.prop('selectionStart') isnt value.length
+
+  # Remove the trailing hyphen
+  if /\-\d?$/.test(value)
+    e.preventDefault()
+    setTimeout -> $target.val(value.replace(/\-\d?$/, ''))
+    
 # Format CVC
 
 reFormatCVC = (e) ->
@@ -325,6 +367,18 @@ restrictExpiry = (e) ->
   value = value.replace(/\D/g, '')
 
   return false if value.length > 6
+  
+restrictZip = (e) ->
+  $target = $(e.currentTarget)
+  digit   = String.fromCharCode(e.which)
+  return unless /^\d+$/.test(digit)
+
+  return if hasTextSelected($target)
+
+  value = $target.val() + digit
+  value = value.replace(/\D/g, '')
+
+  return false if value.length > 9
 
 restrictCVC = (e) ->
   $target = $(e.currentTarget)
@@ -384,6 +438,16 @@ $.payment.fn.formatCardNumber = ->
   @on('change', reFormatCardNumber)
   @on('input', reFormatCardNumber)
   @on('input', setCardType)
+  this
+  
+$.payment.fn.formatZip = ->
+  @on('keypress', restrictNumeric)
+  @on('keypress', restrictZip)
+  @on('keypress', formatZip)
+  @on('keydown',  formatBackZip)
+  @on('paste', reFormatZip)
+  @on('change', reFormatZip)
+  @on('input', reFormatZip)
   this
 
 # Restrictions
@@ -471,7 +535,13 @@ $.payment.validateCardCVC = (cvc, type) ->
   else
     # Check against all types
     cvc.length >= 3 and cvc.length <= 4
+    
+$.payment.validateZip = (zip) ->
+  zip = (zip + '').replace(/\s+|-/g, '')
+  return false unless /^\d+$/.test(zip)
 
+  zip.length in [5,9]
+  
 $.payment.cardType = (num) ->
   return null unless num
   cardFromNumber(num)?.type or null
@@ -516,3 +586,10 @@ $.payment.formatExpiry = (expiry) ->
     sep = ' / '
 
   return mon + sep + year
+  
+$.payment.formatZip = (zip) ->
+  zip = (zip + '').replace(/\D/g, '')[0...9]
+  
+  return zip unless zip.length > 5  
+  
+  return zip.substring(0, 5) + '-' + zip.substring(5)
