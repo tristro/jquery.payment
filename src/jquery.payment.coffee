@@ -276,6 +276,7 @@ reFormatZip = (e) ->
     value   = $target.val()
     value   = $.payment.formatZip(value)
     $target.val(value)
+  true # allow event to bubble
 
 formatZip = (e) ->
   # Only format if input is a number
